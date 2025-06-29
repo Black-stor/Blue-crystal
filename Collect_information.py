@@ -43,10 +43,25 @@ def print_banner():
     from rich.text import Text
 
     console = Console()
+    detective_lens = r"""
+       .-''''-.
+     .'        '.
+    /            \
+   |              |
+   |,  .-.  .-.  ,|
+   | )(_o/  \o_)( |
+   |/     /\     \|
+   (_     ^^     _)
+    \__|IIIIII|__/
+     | \IIIIII/ |
+     \          /
+      `--------`
+    """
     banner_text = Text()
-    banner_text.append("أداة جمع المعلومات المتكاملة\n", style="bold magenta")
+    banner_text.append(detective_lens + "\n", style="bold yellow")
+    banner_text.append("أداة جمع المعلومات\n", style="bold magenta")
     banner_text.append("Termux & Kali Linux\n", style="bold cyan")
-    banner_text.append("بواسطة PentestGPT\n", style="bold green")
+    banner_text.append("بواسطة Black Storm\n", style="bold green")
     panel = Panel(banner_text, border_style="bright_blue", expand=False)
     console.print(panel)
 
@@ -108,10 +123,9 @@ def twitter_info(username):
 def print_boxed(title, content, style="green"):
     from rich.console import Console
     from rich.panel import Panel
-    from rich.syntax import Syntax
+    import json
     console = Console()
     if isinstance(content, dict):
-        import json
         content_str = json.dumps(content, ensure_ascii=False, indent=2)
     else:
         content_str = str(content)
@@ -122,28 +136,43 @@ def main():
     clear_screen()
     print_banner()
 
-    inp = input("أدخل رقم هاتف أو رابط حساب اجتماعي (تويتر فقط حالياً) أو دومين: ").strip()
+    from rich.console import Console
+    console = Console()
 
-    import re
+    while True:
+        console.print("\n[bold yellow]اختر نوع جمع المعلومات:[/bold yellow]")
+        console.print("[cyan]1[/cyan] - معلومات رقم هاتف")
+        console.print("[cyan]2[/cyan] - معلومات دومين")
+        console.print("[cyan]3[/cyan] - معلومات حساب تويتر")
+        console.print("[cyan]0[/cyan] - خروج")
 
-    phone_pattern = re.compile(r'^\+?\d{7,15}$')
-    if phone_pattern.match(inp):
-        print_boxed("معلومات رقم الهاتف", phone_info(inp), style="cyan")
-        return
+        choice = input("أدخل اختيارك: ").strip()
 
-    twitter_match = re.match(r'https?://(www\.)?twitter\.com/([A-Za-z0-9_]+)', inp)
-    if twitter_match:
-        username = twitter_match.group(2)
-        print_boxed(f"معلومات حساب تويتر: {username}", twitter_info(username), style="magenta")
-        return
-
-    domain = inp.lower()
-    print_boxed(f"معلومات WHOIS عن: {domain}", get_whois(domain), style="yellow")
-    print_boxed(f"سجلات DNS عن: {domain}", get_dns(domain), style="green")
+        if choice == '1':
+            number = input("أدخل رقم الهاتف (مثلاً +201234567890): ").strip()
+            print_boxed("معلومات رقم الهاتف", phone_info(number), style="cyan")
+        elif choice == '2':
+            domain = input("أدخل اسم الدومين (مثلاً example.com): ").strip().lower()
+            print_boxed(f"معلومات WHOIS عن: {domain}", get_whois(domain), style="yellow")
+            print_boxed(f"سجلات DNS عن: {domain}", get_dns(domain), style="green")
+        elif choice == '3':
+            twitter_url = input("أدخل رابط حساب تويتر (مثلاً https://twitter.com/username): ").strip()
+            import re
+            twitter_match = re.match(r'https?://(www\.)?twitter\.com/([A-Za-z0-9_]+)', twitter_url)
+            if twitter_match:
+                username = twitter_match.group(2)
+                print_boxed(f"معلومات حساب تويتر: {username}", twitter_info(username), style="magenta")
+            else:
+                console.print("[red]رابط تويتر غير صحيح. حاول مرة أخرى.[/red]")
+        elif choice == '0':
+            console.print("[bold red]وداعاً![/bold red]")
+            break
+        else:
+            console.print("[red]اختيار غير صالح. حاول مرة أخرى.[/red]")
 
 if __name__ == "__main__":
     check_and_install_packages()
     clear_screen()
     print_banner()
     main()
-                  
+    
