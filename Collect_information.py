@@ -1,13 +1,15 @@
 import subprocess
 import sys
 import importlib
+import os
 
 required_packages = [
     "requests",
     "beautifulsoup4",
     "phonenumbers",
     "python-whois",
-    "dnspython"
+    "dnspython",
+    "rich"
 ]
 
 def install_package(package):
@@ -17,8 +19,6 @@ def install_package(package):
 def check_and_install_packages():
     for package in required_packages:
         try:
-            # اسم الحزمة في pip قد يختلف عن اسم الموديول في import
-            # لذلك نستخدم mapping بسيط:
             module_name = package
             if package == "beautifulsoup4":
                 module_name = "bs4"
@@ -30,6 +30,25 @@ def check_and_install_packages():
                 install_package(package)
         except Exception as e:
             print(f"خطأ أثناء التحقق أو التثبيت للحزمة {package}: {e}")
+
+def clear_screen():
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        os.system('clear')
+
+def print_banner():
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.text import Text
+
+    console = Console()
+    banner_text = Text()
+    banner_text.append("أداة جمع المعلومات المتكاملة\n", style="bold magenta")
+    banner_text.append("Termux & Kali Linux\n", style="bold cyan")
+    banner_text.append("بواسطة PentestGPT\n", style="bold green")
+    panel = Panel(banner_text, border_style="bright_blue", expand=False)
+    console.print(panel)
 
 def get_whois(domain):
     import whois
@@ -86,37 +105,45 @@ def twitter_info(username):
     except Exception as e:
         return {"error": str(e)}
 
+def print_boxed(title, content, style="green"):
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.syntax import Syntax
+    console = Console()
+    if isinstance(content, dict):
+        import json
+        content_str = json.dumps(content, ensure_ascii=False, indent=2)
+    else:
+        content_str = str(content)
+    panel = Panel(content_str, title=title, border_style=style, expand=False)
+    console.print(panel)
+
 def main():
-    print("أداة جمع المعلومات المتكاملة")
+    clear_screen()
+    print_banner()
+
     inp = input("أدخل رقم هاتف أو رابط حساب اجتماعي (تويتر فقط حالياً) أو دومين: ").strip()
 
     import re
-    import json
 
     phone_pattern = re.compile(r'^\+?\d{7,15}$')
     if phone_pattern.match(inp):
-        print("جمع معلومات عن رقم الهاتف...")
-        info = phone_info(inp)
-        print(json.dumps(info, ensure_ascii=False, indent=2))
+        print_boxed("معلومات رقم الهاتف", phone_info(inp), style="cyan")
         return
 
     twitter_match = re.match(r'https?://(www\.)?twitter\.com/([A-Za-z0-9_]+)', inp)
     if twitter_match:
         username = twitter_match.group(2)
-        print(f"جمع معلومات عن حساب تويتر: {username}")
-        info = twitter_info(username)
-        print(json.dumps(info, ensure_ascii=False, indent=2))
+        print_boxed(f"معلومات حساب تويتر: {username}", twitter_info(username), style="magenta")
         return
 
     domain = inp.lower()
-    print(f"جمع معلومات WHOIS عن: {domain}")
-    whois_data = get_whois(domain)
-    print(whois_data)
-
-    print(f"\nجمع سجلات DNS عن: {domain}")
-    dns_data = get_dns(domain)
-    print(json.dumps(dns_data, ensure_ascii=False, indent=2))
+    print_boxed(f"معلومات WHOIS عن: {domain}", get_whois(domain), style="yellow")
+    print_boxed(f"سجلات DNS عن: {domain}", get_dns(domain), style="green")
 
 if __name__ == "__main__":
     check_and_install_packages()
+    clear_screen()
+    print_banner()
     main()
+                  
